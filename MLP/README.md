@@ -13,7 +13,8 @@ Jika menggunakan *local environment* pada PC/laptop masing-masing, pastikan *too
 Alternatif lainnya, Anda dapat menggunakan komputasi pada *cloud environment* seperti [Google Colab](https://colab.research.google.com/).
 
 ## Warming Up
-Berikut disediakan *source code* implementasi klasifikasi objek MNIST yang sempat dibahas di kelas: .... Silakan digunakan sebagai *starter kit* untuk mengimplementasikan model klasifikasi [FashionMNIST](https://pytorch.org/vision/stable/generated/torchvision.datasets.FashionMNIST.html).
+Berikut disediakan *source code* implementasi klasifikasi objek MNIST yang sempat dibahas di kelas: https://github.com/ghif/IF5281/blob/main/src/05-image_classification.ipynb. 
+Silakan digunakan sebagai *starter kit* untuk mengimplementasikan model klasifikasi [FashionMNIST](https://pytorch.org/vision/stable/generated/torchvision.datasets.FashionMNIST.html).
 
 ## Challenge: Tweaking your classifier to be "good enough"
 Tujuan dari tantangan ini adalah sebagai pemanasan untuk lebih familiar dengan PyTorch dalam menghasilkan dan menyetel (*tuning*) model klasifikasi dengan pendekatan Deep Learning. 
