@@ -28,7 +28,7 @@ Untuk itu, adapun beberapa tugas yang perlu Anda selesaikan.
 
 3. Lakukan perbaikan terhadap mekanisme *training* sehingga mendapatkan akurasi klasifikasi yang lebih baik. Silakan berkreasi terhadap cara atau trik apapun yang Anda lakukan (misal: menambah layer/memperbesar parameter, menggunakan fungsi non-linear/aktivasi lain, menggunakan metode optimisasi lain atau mengganti konfigurasinya, menambah metode regularisasi, dsb), dengan 1 batasan: menggunakan arsitektur MLP/dense layer (__poin maks: 30__).
     - Test accuracy $\geq 88\%$ (30 poin)
-    - $82\% \leq \text{test accuracy} < 88\%$ (20 poin)
+    - $82\%$ $\leq$ test accuracy $<$ $88\%$ (20 poin)
     - Test accuracy $< 82\%$ (poin: 10)
 
 
