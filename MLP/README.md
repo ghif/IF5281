@@ -35,7 +35,7 @@ Untuk itu, adapun beberapa tugas yang perlu Anda selesaikan.
 
 ### Deliverables
 Hasil pekerjaan Anda dikumpulkan dalam format __[NIM]-[NAMALENGKAP]-IF5281-DL1-MLP.zip__ yang berisi:
-- 1 *Jupyter notebook script* (ipynb) yang berisi implementasi tantangan 1 (MLP standar) dan 2 (visualisasi)
+- 1 *Jupyter notebook script* (ipynb) yang berisi implementasi tantangan 1 (MLP standar) dan 2 (visualisasi).
 - 1 *Jupyter notebook script* (ipynb) yang berisi implementasi tantangan 3 (MLP optimum) dan penulisan tantangan 4.
 
 Batas akhir pengumpulan: __Rabu, 22 Februari 2023, 17:00 WIB__.
