@@ -19,11 +19,15 @@ Seluruh implementasi kode menggunakan library [PyTorch](https://pytorch.org/).
     - Operasi convolution
     - Residual connection
 
-4. Recurrent neural networks
+4. Generative models
+    - Variational autoencoders
+    - Generative adversarial networks
+
+5. Recurrent neural networks
     - Simple RNN
     - LSTM
     - GRU
 
-5. Transformers
+6. Transformers
     - Mekanisme *attention*
     - Transformer block
