@@ -11,6 +11,19 @@ Seluruh implementasi kode menggunakan library [PyTorch](https://pytorch.org/).
 
 2. Simple classifier: multi-layer perceptron
     - Feed-forward networks
-    - AutograBackpropagation
-    - 
-3. 
+    - Autograd
+    - Backpropagation
+    - Optimizer
+
+3. Convolutional networks
+    - Operasi convolution
+    - Residual connection
+
+4. Recurrent neural networks
+    - Simple RNN
+    - LSTM
+    - GRU
+
+5. Transformers
+    - Mekanisme *attention*
+    - Transformer block
