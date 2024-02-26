@@ -6,8 +6,8 @@ Seluruh implementasi kode menggunakan library [PyTorch](https://pytorch.org/).
 
 1. Aljabar linear
     - Vektor dan matriks
-    - Operasi aljabar linear
-    - Fungi
+    - Aljabar linear
+    - Least-squares
 
 2. Simple classifier: multi-layer perceptron
     - Feed-forward networks
@@ -22,6 +22,7 @@ Seluruh implementasi kode menggunakan library [PyTorch](https://pytorch.org/).
 4. Generative models
     - Variational autoencoders
     - Generative adversarial networks
+    - Diffussion model (*)
 
 5. Recurrent neural networks
     - Simple RNN
@@ -31,3 +32,4 @@ Seluruh implementasi kode menggunakan library [PyTorch](https://pytorch.org/).
 6. Transformers
     - Mekanisme *attention*
     - Transformer block
+    - LLM finetuning (*)
