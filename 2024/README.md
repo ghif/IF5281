@@ -4,7 +4,7 @@ Seluruh implementasi kode menggunakan library [PyTorch](https://pytorch.org/).
 
 ## Topik
 
-1. Aljabar linear
+1. Basic math
     - Vektor dan matriks
     - Aljabar linear
     - Least-squares
