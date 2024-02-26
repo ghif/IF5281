@@ -33,3 +33,4 @@ Seluruh implementasi kode menggunakan library [PyTorch](https://pytorch.org/).
     - Mekanisme *attention*
     - Transformer block
     - LLM finetuning (*)
+    - Membangung aplikasi dengan LLM: Retrieval Augmented Generation (RAG) (*)
