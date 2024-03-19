@@ -18,6 +18,7 @@ Seluruh implementasi kode menggunakan library [PyTorch](https://pytorch.org/).
 3. Convolutional networks
     - Operasi convolution
     - Residual connection
+    - Beberapa contoh arsitektur: LeNet, VGG, ResNet
 
 4. Generative models
     - Variational autoencoders
