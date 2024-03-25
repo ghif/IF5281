@@ -94,12 +94,12 @@ logits = model(images)
 optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
 
 
-for epoch in range(EPOCHS):
-    losses, train_time = tu.train(model, train_dataloader, optimizer, device=DEVICE)
+# for epoch in range(EPOCHS):
+#     losses, train_time = tu.train(model, train_dataloader, optimizer, device=DEVICE)
 
-    train_loss, train_acc, _ = tu.evaluate(model, train_dataloader, device=DEVICE)
-    test_loss, test_acc, _ = tu.evaluate(model, test_dataloader, device=DEVICE)
+#     train_loss, train_acc, _ = tu.evaluate(model, train_dataloader, device=DEVICE)
+#     test_loss, test_acc, _ = tu.evaluate(model, test_dataloader, device=DEVICE)
 
-    print(f"[Epoch {epoch + 1} / {EPOCHS}, training time: {train_time:.2f} secs] (Train) loss: {train_loss:.4f}, accuracy: {train_acc:.4f} (Test) loss: {test_loss:.4f}, accuracy: {test_acc:.4f}")
+#     print(f"[Epoch {epoch + 1} / {EPOCHS}, training time: {train_time:.2f} secs] (Train) loss: {train_loss:.4f}, accuracy: {train_acc:.4f} (Test) loss: {test_loss:.4f}, accuracy: {test_acc:.4f}")
 
 

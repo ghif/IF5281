@@ -174,25 +174,25 @@ class VGG16(nn.Module):
 #         self.fc2= nn.Sequential(
 #             nn.Linear(4096, num_classes))
         
-#     def forward(self, x):
-#         out = self.layer1(x)
-#         out = self.layer2(out)
-#         out = self.layer3(out)
-#         out = self.layer4(out)
-#         out = self.layer5(out)
-#         out = self.layer6(out)
-#         out = self.layer7(out)
-#         out = self.layer8(out)
-#         out = self.layer9(out)
-#         out = self.layer10(out)
-#         out = self.layer11(out)
-#         out = self.layer12(out)
-#         out = self.layer13(out)
-#         out = torch.flatten(out, 1)
-#         out = self.fc(out)
-#         out = self.fc1(out)
-#         out = self.fc2(out)
-#         return out
+    def forward(self, x):
+        out = self.layer1(x)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
+        out = self.layer5(out)
+        out = self.layer6(out)
+        out = self.layer7(out)
+        out = self.layer8(out)
+        out = self.layer9(out)
+        out = self.layer10(out)
+        out = self.layer11(out)
+        out = self.layer12(out)
+        out = self.layer13(out)
+        out = torch.flatten(out, 1)
+        out = self.fc(out)
+        out = self.fc1(out)
+        out = self.fc2(out)
+        return out
 
 class ResidualBlock(nn.Module):
     def __init__(
