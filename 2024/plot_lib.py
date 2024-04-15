@@ -140,10 +140,33 @@ def plot_state(data, state, b, decoder):
         _visualise_values(states[seq_len_w_pad - seq_len:], list(actual_data))
         
         
-def plot_results(train_res, test_res, xlabel='Epoch',legend=['train','test'], title='Accuracy'):
+def plot_results(
+    train_res, 
+    test_res, 
+    xlabel='Epoch', 
+    ylabel='Accuracy',
+    legend=['train','test'], 
+    title='Accuracy', 
+    ylim=None,
+    figpath=None,
+    
+):
     xx = range(len(train_res))
+
+    plt.clf()
     plt.plot(xx, train_res)
     plt.plot(xx, test_res)
     plt.xlabel(xlabel)
-    plt.legend(legend)
+    plt.ylabel(ylabel)
     plt.title(title)
+    plt.legend(legend)
+    plt.grid(True)
+    if ylim is not None:
+        plt.ylim(0, ylim)
+
+    if figpath is None:
+        plt.show()
+    else:
+        plt.savefig(figpath)
+
+    
