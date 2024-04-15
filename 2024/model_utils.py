@@ -334,3 +334,38 @@ class ResNet(nn.Module):
         logits = self.fc(h)
 
         return logits
+    
+# Define model
+class SimpleRNN(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super().__init__()
+        self.rnn = nn.RNN(input_size, hidden_size, nonlinearity='relu', batch_first=True)
+        self.linear = nn.Linear(hidden_size, output_size)
+    
+    def forward(self, x):
+        h, h_n = self.rnn(x)
+        y = self.linear(h)
+        return y
+    
+class SimpleLSTM(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, num_layers=1):
+        super().__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers=num_layers, batch_first=True)
+        self.linear = nn.Linear(hidden_size, output_size)
+    
+    def forward(self, x):
+        h, (h_n, c_n) = self.lstm(x)
+        y = self.linear(h)
+        return y
+    
+    def get_states_across_time(self, x):
+        h_c = None
+        h_list, c_list = list(), list()
+        with torch.no_grad():
+            for t in range(x.size(1)):
+                h_c = self.lstm(x[:, [t], :], h_c)[1]
+                h_list.append(h_c[0])
+                c_list.append(h_c[1])
+            h = torch.cat(h_list)
+            c = torch.cat(c_list)
+        return h, c

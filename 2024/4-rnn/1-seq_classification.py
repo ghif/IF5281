@@ -26,6 +26,7 @@ from torch.nn import functional as F
 import torch
 
 from plot_lib import plot_results, set_default
+import model_utils as mu
 
 from tqdm import tqdm
 
@@ -39,28 +40,7 @@ model_type = "lstm"
 # difficulty = "normal"
 difficulty = "moderate"
 
-# Define model
-class SimpleRNN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super().__init__()
-        self.rnn = nn.RNN(input_size, hidden_size, nonlinearity='relu', batch_first=True)
-        self.linear = nn.Linear(hidden_size, output_size)
-    
-    def forward(self, x):
-        h, h_n = self.rnn(x)
-        y = self.linear(h)
-        return y
-    
-class SimpleLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, num_layers=1):
-        super().__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers=num_layers, batch_first=True)
-        self.linear = nn.Linear(hidden_size, output_size)
-    
-    def forward(self, x):
-        h, (h_n, c_n) = self.lstm(x)
-        y = self.linear(h)
-        return y
+
     
 def train(model, datagen, optimizer, device="cpu"):
     model.train()
@@ -166,19 +146,19 @@ test_data_gen = QRSU.get_predefined_generator(difficulty_level, batch_size)
 input_size = train_data_gen.n_symbols
 # hidden_size = 8 # easy
 # hidden_size = 16
-hidden_size = 64 # normal
+hidden_size = 64 # normal, moderate
 # hidden_size = 256 # moderate
 # hidden_size = 512 # hard
 output_size = train_data_gen.n_classes    
 
 if model_type == "rnn":
-    model = SimpleRNN(
+    model = mu.SimpleRNN(
         input_size=input_size, 
         hidden_size=hidden_size,
         output_size=output_size
     )
 else:
-    model = SimpleLSTM(
+    model = mu.SimpleLSTM(
         input_size=input_size, 
         hidden_size=hidden_size,
         output_size=output_size,
