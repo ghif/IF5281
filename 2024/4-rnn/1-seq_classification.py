@@ -37,6 +37,7 @@ device = "mps" if torch.backends.mps.is_available() else "cpu"
 max_epochs = 100
 # model_type = "rnn"
 model_type = "lstm"
+# difficulty = "easy"
 # difficulty = "normal"
 difficulty = "moderate"
 

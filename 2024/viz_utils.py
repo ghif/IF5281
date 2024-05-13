@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 import torch
 import torchvision.transforms.functional as F
 from torchvision.utils import make_grid
+from sklearn.manifold import TSNE
+import seaborn as sns
+
+import pandas as pd
+import os
 
 plt.rcParams["savefig.bbox"] = 'tight'
 
@@ -87,5 +92,40 @@ def normalize(x, new_min=0, new_max=255):
     old_max = np.max(x)
     xn = (x - old_min) * ((new_max - new_min) / (old_max - old_min)) + new_min
     return xn
+
+
+# def tsne_plot(save_dir, targets, outputs):
+def plot_features_tsne(feat, labels, save_path):
+    print('generating t-SNE plot...')
+    # tsne_output = bh_sne(outputs)
+    tsne = TSNE(random_state=0)
+    tsne_output = tsne.fit_transform(feat)
+
+    df = pd.DataFrame(tsne_output, columns=['x', 'y'])
+    df['targets'] = labels
+
+    plt.rcParams['figure.figsize'] = 10, 10
+    sns.scatterplot(
+        x='x', y='y',
+        hue='targets',
+        palette=sns.color_palette("hls", 10),
+        data=df,
+        marker='o',
+        legend="full",
+        alpha=0.5
+    )
+
+    plt.xticks([])
+    plt.yticks([])
+    plt.xlabel('')
+    plt.ylabel('')
+
+    # plt.savefig(os.path.join(save_dir,'tsne.png'), bbox_inches='tight')
+    plt.savefig(save_path, bbox_inches='tight')
+    print('done!')
+    plt.clf()
+
+# targets, outputs = gen_features()
+# tsne_plot(args.save_dir, targets, outputs)
 
 
