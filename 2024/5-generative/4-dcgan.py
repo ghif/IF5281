@@ -29,7 +29,7 @@ DATASET = 'cifar10'
 BATCH_SIZE = 64
 NUM_EPOCH = 50
 IMAGE_SIZE = 64
-DAY = '13may'
+DAY = '14may'
 
 NC = 3 # num channels
 NGPU = 0 # num gpus
@@ -229,7 +229,7 @@ dis_path = os.path.join(MODEL_DIR, f"{dname}_{DATASET}_z{NZ}_ep{NUM_EPOCH}_{DAY}
 
 fname, ext = os.path.splitext(gen_path)
 
-sample_dir = os.path.join(MODEL_DIR, f"{fname}")
+sample_dir = os.path.join(MODEL_DIR, f"{fname}_{DAY}")
 if not os.path.exists(sample_dir):
     os.makedirs(sample_dir)
     print(f'The new directory {sample_dir} has been created')
@@ -261,8 +261,8 @@ for epoch in range(NUM_EPOCH):
         noise = torch.randn(batch_size, NZ, 1, 1, device=DEVICE)
         fake = netG(noise)
         label.fill_(fake_label)
-        # output = netD(fake.detach())
-        output = netD(fake)
+        output = netD(fake.detach())
+        # output = netD(fake)
         errD_fake = criterion(output, label)
         errD_fake.backward()
         D_G_z1 = output.mean().item()
@@ -273,8 +273,8 @@ for epoch in range(NUM_EPOCH):
         ############################
         # Update G network: minimize log(D(x)) + log(1 - D(G(z)))
         ###########################
-        noise = torch.randn(batch_size, NZ, 1, 1, device=DEVICE)
-        fake = netG(noise)
+        # noise = torch.randn(batch_size, NZ, 1, 1, device=DEVICE)
+        # fake = netG(noise)
         label.fill_(real_label) # fake labels are real for generator cost
         output = netD(fake)
         errG = criterion(output, label)
