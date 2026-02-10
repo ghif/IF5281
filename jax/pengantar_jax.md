@@ -19,6 +19,15 @@ Kekuatan utama JAX terletak pada empat transformasi fungsi utamanya:
 *   **`vmap()` (Vectorization)**: Secara otomatis memvektorisasi fungsi yang bekerja pada sampel tunggal agar dapat bekerja pada *batch* data dengan efisiensi tinggi.
 *   **`pmap()` (Parallelization)**: Mendistribusikan komputasi ke berbagai perangkat (multi-GPU atau multi-TPU) secara paralel.
 
+## JAX vs PyTorch: Keunggulan Komputasi Paralel
+
+Meskipun PyTorch sangat populer, JAX menawarkan pendekatan yang berbeda dan sering kali lebih unggul untuk komputasi paralel:
+
+1.  **Composability (Komposabilitas)**: Di JAX, transformasi seperti `vmap`, `pmap`, dan `jit` dapat disusun seolah-olah menyusun lego. Anda bisa menulis fungsi untuk sampel tunggal, lalu membungkusnya dengan `vmap` untuk *batching*, dan kemudian `pmap` untuk distribusi multi-perangkat secara instan tanpa mengubah logika inti fungsi tersebut.
+2.  **Implicit Vectorization (`vmap`)**: PyTorch sering menghasikan kode yang rumit saat menangani *indexing* dan *broadcasting* manual untuk operasi *batch*. JAX menyederhanakan ini dengan `vmap`, yang secara otomatis memvektorisasi fungsi tanpa beban tambahan pada memori atau logika kode.
+3.  **XLA Optimizations**: JAX secara asli menggunakan XLA untuk menggabungkan (*fusing*) kernel komputasi. Dalam skenario paralel, hal ini mengurangi latensi komunikasi antar perangkat dan memaksimalkan penggunaan *bandwidth* perangkat keras.
+4.  **Functional Programming**: Karena JAX memaksa penggunaan fungsi murni tanpa *side-effects*, pendistribusian beban kerja ke ribuan *core* menjadi lebih aman secara matematis dan mudah diprediksi hasilnya, berbeda dengan paradigma *imperative* yang mungkin memiliki masalah dengan *global state*.
+
 ## Konsep Penting: Stateless PRNG
 
 Berbeda dengan NumPy atau PyTorch yang menggunakan *state* global untuk bilangan acak, JAX mengharuskan penggunaan *key* secara eksplisit:
@@ -36,10 +45,28 @@ Hal ini krusial untuk memastikan reproduksibilitas komputasi paralel dan fungsio
 
 JAX sendiri adalah *library* level rendah. Untuk membangun model Deep Learning yang kompleks, komunitas JAX menyediakan berbagai *library* di atasnya:
 
-*   **Flax**: *Library* fleksibel untuk membangun neural network yang dikembangkan oleh Google.
+*   **Flax**: *Library* fleksibel untuk membangun neural network yang dikembangkan oleh Google. Salah satu API terbarunya, **Flax NNX**, menawarkan pendekatan berbasis objek (*stateful*) yang lebih intuitif.
 *   **Haiku**: *Library* berorientasi objek untuk neural network (serupa dengan Sonnet) yang dikembangkan oleh DeepMind.
 *   **Optax**: *Library* khusus untuk optimasi dan *gradient processing*.
 *   **Equinox**: Pendekatan lain dalam membangun model Deep Learning dengan JAX yang sangat transparan.
+
+### Mengapa Menggunakan Flax NNX & Optax?
+
+Membangun model langsung dengan JAX murni memerlukan pengelolaan parameter secara manual sebagai *Pytrees*. Meskipun memberikan kontrol maksimal, hal ini seringkali repetitif. Di sinilah **Flax NNX** dan **Optax** berperan:
+
+#### 1. Flax NNX (Stateful JAX)
+Flax NNX menyederhanakan pengembangan dengan memperkenalkan **`nnx.Module`**. Manfaat utamanya meliputi:
+*   **Manajemen Parameter Otomatis**: Anda mendefinisikan lapisan (misal: `nnx.Linear`) sebagai atribut kelas, dan NNX secara otomatis melacak bobot serta biasnya.
+*   **Integrasi Pytree**: NNX tetap bekerja selaras dengan sistem Pytree JAX, namun membungkusnya dalam antarmuka berorientasi objek yang familiar (mirip PyTorch).
+*   **Kompilasi JIT yang Mudah**: Fungsi pelatihan dapat dibungkus dengan `@nnx.jit`, yang menangani pembaruan *state* model secara transparan.
+
+#### 2. Optax (Optimasi Standar)
+Optax adalah standar industri untuk optimasi di JAX. Manfaat rincinya:
+*   **Komposabilitas**: Anda dapat menggabungkan berbagai transformasi gradien (seperti *gradient clipping* dan Adam optimizer) menggunakan `optax.chain`.
+*   **Kaya Fitur**: Menyediakan implementasi yang sudah teruji untuk SGD, Adam, AdamW, RMSProp, dan teknik penjadwalan *learning rate*.
+*   **Pemisahan Logika**: Memisahkan definisi model dari algoritma optimasi, membuat eksperimen jauh lebih cepat dan bersih.
+
+**Ringkasnya**, beralih dari JAX murni ke Flax NNX & Optax memungkinkan Anda fokus pada arsitektur dan eksperimen, alih-alih terjebak dalam pengelolaan *boilerplate* stateful yang rumit.
 
 ## Contoh Sederhana: Deep Learning di JAX
 
