@@ -23,8 +23,8 @@ def train(model, dataloader, optimizer, metrics, rngs=None):
             return loss, logits
 
         (loss, logits), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
-        optimizer.update(grads) # optimizer is stateful in NNX
-        metrics.update(loss=loss, logits=logits, labels=targets)
+        optimizer.update(model, grads) # optimizer is stateful in NNX
+        metrics.update(values=loss, logits=logits, labels=targets)
         return loss
 
     with tqdm(dataloader, unit="batch") as tepoch:
@@ -32,16 +32,15 @@ def train(model, dataloader, optimizer, metrics, rngs=None):
             start_t = process_time()
             
             # Convert to jnp
-            X_jax = jnp.array(X.numpy())
-            y_jax = jnp.array(y.numpy())
+            X_jax = jnp.asarray(X)
+            y_jax = jnp.asarray(y)
             
             loss = train_step(model, optimizer, metrics, (X_jax, y_jax))
             
             # Since we use jnp.array(X.numpy()), it might be slow for large datasets.
             # In a real scenario, we'd use a JAX-friendly data loader.
             
-            batch_size = X.shape[0]
-            losses += (loss.item() / batch_size)
+            losses += loss.item()
 
             elapsed_time = process_time() - start_t
             train_time += elapsed_time
@@ -51,9 +50,7 @@ def train(model, dataloader, optimizer, metrics, rngs=None):
                 'time(secs)': f"{train_time:.2f}"
             })
 
-    num_data = len(dataloader.dataset)
-    losses /= num_data
-            
+    losses /= len(dataloader)
     return losses, train_time
 
 def evaluate(model, dataloader, metrics):
@@ -69,20 +66,19 @@ def evaluate(model, dataloader, metrics):
         inputs, targets = batch
         logits = model(inputs)
         loss = optax.softmax_cross_entropy_with_integer_labels(logits, targets).mean()
-        metrics.update(loss=loss, logits=logits, labels=targets)
+        metrics.update(values=loss, logits=logits, labels=targets)
         return loss
 
     with tqdm(dataloader, unit="batch") as tepoch:
         for (X, y) in tepoch:
             start_t = process_time()
             
-            X_jax = jnp.array(X.numpy())
-            y_jax = jnp.array(y.numpy())
+            X_jax = jnp.asarray(X)
+            y_jax = jnp.asarray(y)
             
             loss = eval_step(model, metrics, (X_jax, y_jax))
             
-            batch_size = X.shape[0]
-            losses += (loss.item() / batch_size)
+            losses += loss.item()
 
             elapsed_time = process_time() - start_t
             eval_time += elapsed_time
@@ -92,11 +88,7 @@ def evaluate(model, dataloader, metrics):
                 'time(secs)': f"{eval_time:.2f}"
             })
             
+    losses /= len(dataloader)
     model.train()
 
-    num_data = len(dataloader.dataset)
-    # Metrics compute handles accuracy generally
-    # But for parity, we return losses (scaled by num_data), metrics result, and time
-    # This might need adjustment based on how the notebooks use it.
-    
     return losses, eval_time

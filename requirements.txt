@@ -5,3 +5,7 @@ optax==0.2.3
 pandas
 matplotlib
 seaborn
+grain
+tensorflow-datasets
+tensorflow
+scikit-learn
