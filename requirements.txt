@@ -9,3 +9,4 @@ grain
 tensorflow-datasets
 tensorflow
 scikit-learn
+librosa
