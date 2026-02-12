@@ -376,8 +376,13 @@ def load_checkpoint(model: nnx.Module, filepath: str):
             parts = key.split(sep)
             target = result
             for part in parts[:-1]:
-                target = target.setdefault(part, {})
-            target[parts[-1]] = value
+                # Jika part adalah angka, gunakan sebagai integer (untuk nnx.Sequential)
+                k = int(part) if part.isdigit() else part
+                target = target.setdefault(k, {})
+            
+            last_part = parts[-1]
+            last_k = int(last_part) if last_part.isdigit() else last_part
+            target[last_k] = value
         return result
     
     nested_params = unflatten_dict(flat_params)
