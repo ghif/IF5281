@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import jax.numpy as jnp
+import jax
 from IPython.display import HTML, display
 
 
