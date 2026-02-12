@@ -1,6 +1,8 @@
 import jax
 import jax.numpy as jnp
 from flax import nnx
+import safetensors
+from safetensors.flax import save_file, load_file
 
 # LeNet5 (original LeCun et al., 1998)
 class LeNet5(nnx.Module):
@@ -324,3 +326,65 @@ class SimpleBigram(nnx.Module):
             idx = jnp.concatenate([idx, idx_next], axis=1)
             
         return idx
+
+def save_checkpoint(model: nnx.Module, epoch: int, filedir: str = "checkpoint"):
+    """Menyimpan parameter model ke file .safetensors.
+    
+    Args:
+        model: Instance model Flax NNX.
+        epoch: Nomor epoch saat ini.
+        filedir: Prefix path file penyimpanan.
+    """
+    # Ambil state model (parameters)
+    _, state = nnx.split(model)
+    
+    # Ratakan state menjadi dictionary yang kompatibel dengan safetensors
+    # safetensors mengharapkan dict of arrays
+    flat_state = state.to_pure_dict()
+    
+    # Flatten nested dict keys (e.g., {'layer': {'w': ...}} -> {'layer.w': ...})
+    def flatten_dict(d, parent_key='', sep='.'):
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(flatten_dict(v, new_key, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
+    
+    flat_params = flatten_dict(flat_state)
+    
+    filename = f"epoch_{epoch}.safetensors"
+    filepath = f"{filedir}/{filename}"
+    save_file(flat_params, filepath)
+    print(f"Model disimpan ke {filepath}")
+
+def load_checkpoint(model: nnx.Module, filepath: str):
+    """Memuat parameter model dari file .safetensors.
+    
+    Args:
+        model: Instance model Flax NNX yang akan di-update.
+        filepath: Path ke file .safetensors.
+    """
+    flat_params = load_file(filepath)
+    
+    # Rekonstruksi nested dictionary
+    def unflatten_dict(d, sep='.'):
+        result = {}
+        for key, value in d.items():
+            parts = key.split(sep)
+            target = result
+            for part in parts[:-1]:
+                target = target.setdefault(part, {})
+            target[parts[-1]] = value
+        return result
+    
+    nested_params = unflatten_dict(flat_params)
+    
+    # Update model state
+    # Ambil graph_def untuk rekonstruksi state
+    graph_def, _ = nnx.split(model)
+    state = nnx.State(nested_params)
+    nnx.update(model, state)
+    print(f"Model dimuat dari {filepath}")
