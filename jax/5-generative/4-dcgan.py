@@ -198,39 +198,41 @@ class Discriminator(nnx.Module):
         h = nnx.leaky_relu(self.bn3(self.conv3(h), use_running_average=use_running_average), negative_slope=0.2)
         return self.conv5(h).flatten()
 
+class DCGAN(nnx.Module):
+    def __init__(self, nz, ngf, nc, ndf, rngs: nnx.Rngs):
+        self.netG = Generator(nz, ngf, nc, rngs)
+        self.netD = Discriminator(nc, ndf, rngs)
+
 # Init Models
 rngs = nnx.Rngs(0)
-netG = Generator(NZ, NGF, NC, rngs=rngs)
-netD = Discriminator(NC, NDF, rngs=rngs)
-optimizerG = nnx.Optimizer(netG, optax.adam(LR, b1=BETA1), wrt=nnx.Param)
-optimizerD = nnx.Optimizer(netD, optax.adam(LR, b1=BETA1), wrt=nnx.Param)
+model = DCGAN(NZ, NGF, NC, NDF, rngs=rngs)
+optimizerG = nnx.Optimizer(model.netG, optax.adam(LR, b1=BETA1), wrt=nnx.Param)
+optimizerD = nnx.Optimizer(model.netD, optax.adam(LR, b1=BETA1), wrt=nnx.Param)
 
 def loss_bce(logits, labels):
     return jnp.mean(optax.sigmoid_binary_cross_entropy(logits, labels))
 
 @nnx.jit
-def train_step_D(netD, netG, optimizerD, real_x, noise):
-    fake_x = netG(noise, train=False)
-    def loss_fn(netD):
-        real_pred = netD(real_x, train=True)
-        fake_pred = netD(fake_x, train=True)
+def train_step_D(model, optimizerD, real_x, noise):
+    fake_x = model.netG(noise, train=False)
+    def loss_fn(model):
+        real_pred = model.netD(real_x, train=True)
+        fake_pred = model.netD(fake_x, train=True)
         errD = loss_bce(real_pred, jnp.ones_like(real_pred)) + loss_bce(fake_pred, jnp.zeros_like(fake_pred))
         return errD, (nnx.sigmoid(real_pred), nnx.sigmoid(fake_pred))
-    (loss, (real_p, fake_p)), grads = nnx.value_and_grad(loss_fn, has_aux=True)(netD)
-    optimizerD.update(netD, grads)
+    (loss, (real_p, fake_p)), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
+    optimizerD.update(model.netD, grads.netD)
     return loss, jnp.mean(real_p), jnp.mean(fake_p)
 
 @nnx.jit
-def train_step_G(netD, netG, optimizerG, noise):
-    def loss_fn(netG):
-        fake_x = netG(noise, train=True)
-        # Use train=False for netD to avoid TraceContextError.
-        # Stability is now primarily handled by the corrected 32x32 architecture.
-        fake_logits = netD(fake_x, train=False)
+def train_step_G(model, optimizerG, noise):
+    def loss_fn(model):
+        fake_x = model.netG(noise, train=True)
+        fake_logits = model.netD(fake_x, train=True)
         errG = loss_bce(fake_logits, jnp.ones_like(fake_logits))
         return errG, nnx.sigmoid(fake_logits)
-    (loss, outD), grads = nnx.value_and_grad(loss_fn, has_aux=True)(netG)
-    optimizerG.update(netG, grads)
+    (loss, outD), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
+    optimizerG.update(model.netG, grads.netG)
     return loss, jnp.mean(outD)
 
 print("Starting Training Loop...")
@@ -243,9 +245,9 @@ for epoch in range(NUM_EPOCH):
         for batch_idx, (real_x, _) in enumerate(tepoch):
             step_rng, rng_d, rng_g = jax.random.split(step_rng, 3)
             noise_d = jax.random.normal(rng_d, (real_x.shape[0], NZ))
-            errD, D_x, D_G_z1 = train_step_D(netD, netG, optimizerD, real_x, noise_d)
+            errD, D_x, D_G_z1 = train_step_D(model, optimizerD, real_x, noise_d)
             noise_g = jax.random.normal(rng_g, (real_x.shape[0], NZ))
-            errG, D_G_z2 = train_step_G(netD, netG, optimizerG, noise_g)
+            errG, D_G_z2 = train_step_G(model, optimizerG, noise_g)
             
             if jnp.isnan(errD) or jnp.isnan(errG):
                 print(f"\nNaN detected at batch {batch_idx}! LossD: {errD}, LossG: {errG}")
@@ -255,7 +257,7 @@ for epoch in range(NUM_EPOCH):
                 tepoch.set_postfix(Loss_D=f"{errD:.4f}", Loss_G=f"{errG:.4f}", Dx=f"{D_x:.4f}", Dgz=f"{D_G_z2:.4f}")
 
     # if epoch % 10 == 0 or epoch == NUM_EPOCH - 1:
-    fake_samples = netG(fixed_latent, train=False)
+    fake_samples = model.netG(fixed_latent, train=False)
     grid = vu.set_grid(fake_samples, num_cells=NVIZ)
     plt.figure(figsize=(8, 8))
     # NHWC to HW(C) for grid? set_grid usually returns (C, H, W)
@@ -264,5 +266,5 @@ for epoch in range(NUM_EPOCH):
     plt.savefig(os.path.join(sample_dir, f'samples_epoch_{epoch+1}.png'))
     plt.close()
     
-    mu.save_checkpoint(netG, epoch + 1, filedir=os.path.join(checkpoint_dir, "generator"))
-    mu.save_checkpoint(netD, epoch + 1, filedir=os.path.join(checkpoint_dir, "discriminator"))
+    mu.save_checkpoint(model.netG, epoch + 1, filedir=os.path.join(checkpoint_dir, "generator"))
+    mu.save_checkpoint(model.netD, epoch + 1, filedir=os.path.join(checkpoint_dir, "discriminator"))
