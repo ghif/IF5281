@@ -66,6 +66,18 @@ Optax adalah standar industri untuk optimasi di JAX. Manfaat rincinya:
 *   **Kaya Fitur**: Menyediakan implementasi yang sudah teruji untuk SGD, Adam, AdamW, RMSProp, dan teknik penjadwalan *learning rate*.
 *   **Pemisahan Logika**: Memisahkan definisi model dari algoritma optimasi, membuat eksperimen jauh lebih cepat dan bersih.
 
+#### 3. Grain (Dataloader Modern)
+Grain adalah *library open-source* dari Google yang dirancang khusus untuk *data loading* yang cepat, deterministik, dan dapat diskalakan pada ekosistem JAX/Flax. Di repositori ini, kita menggunakan Grain untuk menangani *preprocessing* dan *batching* gambar (seperti pada MNIST dan CIFAR-10).
+
+Kelebihan utama Grain:
+*   **Deterministik**: Memastikan urutan data yang sama setiap kali pelatihan dijalankan, yang sangat penting untuk reproduksibilitas riset.
+*   **Stateless**: Grain memisahkan logika transformasi data dari *state* pembacaan, memudahkan pendistribusian beban kerja di multi-GPU/TPU secara efisien.
+*   **Pythonic & Flexible**: Memungkinkan penggunaan transformasi standar Python (seperti NumPy dan PIL) langsung di dalam pipeline data.
+*   **Integrasi Flax NNX**: Grain bekerja sama sangat baik dengan loop pelatihan NNX, memberikan aliran data yang stabil tanpa menghambat (*bottleneck*) kecepatan komputasi XLA.
+
+**Mengapa tidak menggunakan Dataloader PyTorch?**
+Meskipun Dataloader PyTorch bisa digunakan dengan JAX, Grain menawarkan integrasi yang lebih asli (*native*) dengan JAX PRNG (bilangan acak) dan dioptimalkan untuk menghindari *overhead* memori yang sering muncul saat mencampur *framework* yang berbeda dalam satu pipeline.
+
 **Ringkasnya**, beralih dari JAX murni ke Flax NNX & Optax memungkinkan Anda fokus pada arsitektur dan eksperimen, alih-alih terjebak dalam pengelolaan *boilerplate* stateful yang rumit.
 
 ## Contoh Sederhana: Deep Learning di JAX

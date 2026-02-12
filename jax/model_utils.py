@@ -3,6 +3,7 @@ import jax.numpy as jnp
 from flax import nnx
 import safetensors
 from safetensors.flax import save_file, load_file
+import os
 
 # LeNet5 (original LeCun et al., 1998)
 class LeNet5(nnx.Module):
@@ -357,6 +358,7 @@ def save_checkpoint(model: nnx.Module, epoch: int, filedir: str = "checkpoint"):
     
     filename = f"epoch_{epoch}.safetensors"
     filepath = f"{filedir}/{filename}"
+    os.makedirs(filedir, exist_ok=True)
     save_file(flat_params, filepath)
     print(f"Model disimpan ke {filepath}")
 
