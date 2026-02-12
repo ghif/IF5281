@@ -5,10 +5,19 @@ import jax
 import jax.numpy as jnp
 # For make_grid equivalent, we might still use torchvision or implement a JAX version
 # If we want to stay pure JAX, we can implement a simple grid function.
-from sklearn.manifold import TSNE
-import seaborn as sns
 
-import pandas as pd
+try:
+    from sklearn.manifold import TSNE
+    import seaborn as sns
+    import pandas as pd
+    _HAS_SKLEARN = True
+except (ImportError, ValueError):
+    print("Warning: sklearn/pandas not found or incompatible. t-SNE plotting will be disabled.")
+    _HAS_SKLEARN = False
+    TSNE = None
+    sns = None
+    pd = None
+
 import os
 
 plt.rcParams["savefig.bbox"] = 'tight'
@@ -146,6 +155,10 @@ def normalize(x, new_min=0, new_max=255):
 
 
 def plot_features_tsne(feat, labels, save_path, show=False):
+    if not _HAS_SKLEARN:
+        print("Skipping t-SNE plot due to missing/incompatible sklearn/pandas.")
+        return
+
     print('generating t-SNE plot...')
     tsne = TSNE(random_state=0)
     tsne_output = tsne.fit_transform(np.array(feat))
