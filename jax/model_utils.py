@@ -221,22 +221,24 @@ class SimpleRNN(nnx.Module):
         # Flax NNX doesn't have a built-in "RNN" equivalent yet like PyTorch's nn.RNN
         # We might need to implement it manually or use flax.linen.RNN
         # However, for simplicity, let's assume we want to mock the behavior
-        self.rnn_cell = nnx.RNNCell(input_size, hidden_size, rngs=rngs)
+        self.rnn_cell = nnx.SimpleCell(input_size, hidden_size, rngs=rngs)
         self.linear = nnx.Linear(hidden_size, output_size, rngs=rngs)
         self.hidden_size = hidden_size
     
     def __call__(self, x):
         # x shape: (batch, seq_len, input_size)
         batch_size, seq_len, _ = x.shape
-        h = jnp.zeros((batch_size, self.hidden_size))
+        h_init = jnp.zeros((batch_size, self.hidden_size))
         
-        h_list = []
-        for t in range(seq_len):
-            h = nnx.relu(self.rnn_cell(h, x[:, t, :]))
-            h_list.append(h)
+        # Use jax.lax.scan for efficiency
+        def scan_fn(h, x_t):
+            h_next, h_out = self.rnn_cell(h, x_t)
+            h_next = nnx.relu(h_next)
+            return h_next, h_next
+
+        _, h_stacked = jax.lax.scan(scan_fn, h_init, jnp.transpose(x, (1, 0, 2)))
+        h_stacked = jnp.transpose(h_stacked, (1, 0, 2)) # (batch, seq_len, hidden_size)
         
-        # Stack hidden states
-        h_stacked = jnp.stack(h_list, axis=1)
         y = self.linear(h_stacked)
         return y
     
@@ -249,30 +251,34 @@ class SimpleLSTM(nnx.Module):
     
     def __call__(self, x):
         batch_size, seq_len, _ = x.shape
-        h = jnp.zeros((batch_size, self.hidden_size))
-        c = jnp.zeros((batch_size, self.hidden_size))
+        h_init = jnp.zeros((batch_size, self.hidden_size))
+        c_init = jnp.zeros((batch_size, self.hidden_size))
         
-        h_list = []
-        for t in range(seq_len):
-            h, c = self.lstm_cell( (h, c), x[:, t, :])
-            h_list.append(h)
+        def scan_fn(carry, x_t):
+            h, c = carry
+            (h_next, c_next), h_out = self.lstm_cell((h, c), x_t)
+            return (h_next, c_next), h_out
+
+        _, h_stacked = jax.lax.scan(scan_fn, (h_init, c_init), jnp.transpose(x, (1, 0, 2)))
+        h_stacked = jnp.transpose(h_stacked, (1, 0, 2))
         
-        h_stacked = jnp.stack(h_list, axis=1)
         y = self.linear(h_stacked)
         return y
     
     def get_states_across_time(self, x):
         batch_size, seq_len, _ = x.shape
-        h = jnp.zeros((batch_size, self.hidden_size))
-        c = jnp.zeros((batch_size, self.hidden_size))
+        h_init = jnp.zeros((batch_size, self.hidden_size))
+        c_init = jnp.zeros((batch_size, self.hidden_size))
         
-        h_list, c_list = [], []
-        for t in range(seq_len):
-            h, c = self.lstm_cell((h, c), x[:, t, :])
-            h_list.append(h)
-            c_list.append(c)
+        def scan_fn(carry, x_t):
+            h, c = carry
+            (h_next, c_next), h_out = self.lstm_cell((h, c), x_t)
+            return (h_next, c_next), (h_next, c_next)
         
-        return jnp.concatenate(h_list), jnp.concatenate(c_list)
+        _, (h_stacked, c_stacked) = jax.lax.scan(scan_fn, (h_init, c_init), jnp.transpose(x, (1, 0, 2)))
+        
+        return jnp.transpose(h_stacked, (1, 0, 2)).reshape(-1, self.hidden_size), \
+               jnp.transpose(c_stacked, (1, 0, 2)).reshape(-1, self.hidden_size)
 
 class SimpleBigram(nnx.Module):
     def __init__(self, vocab_size, seq_len, n_embed, n_hidden, num_layers=1, rngs: nnx.Rngs = None):
@@ -287,15 +293,17 @@ class SimpleBigram(nnx.Module):
         x = self.embedding(idx) # (batch, seq_len, n_embed)
         
         batch_size, seq_len, _ = x.shape
-        h = jnp.zeros((batch_size, self.n_hidden))
-        c = jnp.zeros((batch_size, self.n_hidden))
+        h_init = jnp.zeros((batch_size, self.n_hidden))
+        c_init = jnp.zeros((batch_size, self.n_hidden))
         
-        h_list = []
-        for t in range(seq_len):
-            h, c = self.lstm((h, c), x[:, t, :])
-            h_list.append(h)
+        def scan_fn(carry, x_t):
+            h, c = carry
+            (h_next, c_next), h_out = self.lstm((h, c), x_t)
+            return (h_next, c_next), h_out
+
+        _, h_stacked = jax.lax.scan(scan_fn, (h_init, c_init), jnp.transpose(x, (1, 0, 2)))
+        h_stacked = jnp.transpose(h_stacked, (1, 0, 2)) # (batch, seq_len, n_hidden)
         
-        h_stacked = jnp.stack(h_list, axis=1) # (batch, seq_len, n_hidden)
         logits = self.linear(h_stacked)
         return logits
     

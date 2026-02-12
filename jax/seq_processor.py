@@ -40,6 +40,14 @@ def get_batch(data, batch_size=4, block_size=8, key=None):
         key = jax.random.PRNGKey(0)
     
     ix = jax.random.randint(key, (batch_size,), 0, len(data) - block_size)
-    x = jnp.stack([data[t:t+block_size] for t in ix])
-    y = jnp.stack([data[t+1:t+block_size+1] for t in ix])
+    
+    def get_single_x(start_idx):
+        return jax.lax.dynamic_slice_in_dim(data, start_idx, block_size)
+    
+    def get_single_y(start_idx):
+        return jax.lax.dynamic_slice_in_dim(data, start_idx + 1, block_size)
+
+    x = jax.vmap(get_single_x)(ix)
+    y = jax.vmap(get_single_y)(ix)
+    
     return x, y
