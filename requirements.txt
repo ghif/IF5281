@@ -10,3 +10,4 @@ tensorflow-datasets
 tensorflow
 scikit-learn
 librosa
+skimage
