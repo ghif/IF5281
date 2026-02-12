@@ -145,7 +145,7 @@ def normalize(x, new_min=0, new_max=255):
     return xn
 
 
-def plot_features_tsne(feat, labels, save_path):
+def plot_features_tsne(feat, labels, save_path, show=False):
     print('generating t-SNE plot...')
     tsne = TSNE(random_state=0)
     tsne_output = tsne.fit_transform(np.array(feat))
@@ -170,5 +170,6 @@ def plot_features_tsne(feat, labels, save_path):
     plt.ylabel('')
 
     plt.savefig(save_path, bbox_inches='tight')
-    print('done!')
+    if show:
+        plt.show()
     plt.clf()
