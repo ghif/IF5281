@@ -24,7 +24,7 @@ import model_utils as mu
 DATA_DIR = os.path.join(parent_dir, "data")
 MODEL_DIR = os.path.join(parent_dir, "models") 
 
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 NUM_EPOCH = 50
 IMAGE_SIZE = 64
 NC = 3 # RGB for CIFAR-10
@@ -223,27 +223,42 @@ optimizerD = nnx.Optimizer(model.netD, optax.adam(LR, b1=BETA1), wrt=nnx.Param)
 def loss_bce(logits, labels):
     return jnp.mean(optax.sigmoid_binary_cross_entropy(logits, labels))
 
+# Flax version check for API compatibility
+def update_optimizer(optimizer, module, grads):
+    try:
+        optimizer.update(module, grads)
+    except TypeError:
+        optimizer.update(grads)
+
 @nnx.jit
 def train_step_D(model, optimizerD, real_x, noise):
     fake_x = model.netG(noise, train=False)
     def loss_fn(model):
-        real_pred = model.netD(real_x, train=True)
-        fake_pred = model.netD(fake_x, train=True)
-        errD = loss_bce(real_pred, jnp.ones_like(real_pred)) + loss_bce(fake_pred, jnp.zeros_like(fake_pred))
-        return errD, (nnx.sigmoid(real_pred), nnx.sigmoid(fake_pred))
+        # Mixed batch for D stability (standard DCGAN best practice)
+        x = jnp.concatenate([real_x, fake_x], axis=0)
+        labels = jnp.concatenate([jnp.ones(real_x.shape[0]), jnp.zeros(fake_x.shape[0])], axis=0)
+        logits = model.netD(x, train=True)
+        errD = loss_bce(logits, labels)
+        
+        pred = nnx.sigmoid(logits)
+        real_p = pred[:real_x.shape[0]]
+        fake_p = pred[real_x.shape[0]:]
+        return errD, (real_p, fake_p)
     (loss, (real_p, fake_p)), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
-    optimizerD.update(grads.netD)
+    update_optimizer(optimizerD, model.netD, grads.netD)
     return loss, jnp.mean(real_p), jnp.mean(fake_p)
 
 @nnx.jit
 def train_step_G(model, optimizerG, noise):
     def loss_fn(model):
         fake_x = model.netG(noise, train=True)
-        fake_logits = model.netD(fake_x, train=True)
+        # Use eval mode for D during G-update to provide stable gradients
+        # via the moving averages learned in the D-step.
+        fake_logits = model.netD(fake_x, train=False)
         errG = loss_bce(fake_logits, jnp.ones_like(fake_logits))
         return errG, nnx.sigmoid(fake_logits)
     (loss, outD), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
-    optimizerG.update(grads.netG)
+    update_optimizer(optimizerG, model.netG, grads.netG)
     return loss, jnp.mean(outD)
 
 print("Starting Training Loop...")
