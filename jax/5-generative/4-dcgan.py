@@ -1,5 +1,5 @@
 import jax
-jax.config.update('jax_platform_name', 'cpu')
+# jax.config.update('jax_platform_name', 'cpu')
 import jax.numpy as jnp
 from flax import nnx
 import matplotlib.pyplot as plt
@@ -15,15 +15,16 @@ import pickle
 
 # Add parent directory to path to import utils
 script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(script_dir))
+parent_dir = os.path.dirname(script_dir)
+sys.path.append(parent_dir)
 import viz_utils as vu
 import model_utils as mu
 
 # Define constants
-DATA_DIR = "../data"
-MODEL_DIR = "../models" 
+DATA_DIR = os.path.join(parent_dir, "data")
+MODEL_DIR = os.path.join(parent_dir, "models") 
 
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 NUM_EPOCH = 50
 IMAGE_SIZE = 64
 NC = 3 # RGB for CIFAR-10
@@ -35,7 +36,7 @@ BETA1 = 0.5
 NVIZ = 64
 
 DATASET = 'cifar10'
-checkpoint_dir = os.path.join(MODEL_DIR, f"dcgan_{DATASET}_z{NZ}")
+checkpoint_dir = os.path.join(MODEL_DIR, f"dcgan_{DATASET}_z{NZ}_v2")
 sample_dir = os.path.join(checkpoint_dir, "samples")
 
 for d in [checkpoint_dir, sample_dir, DATA_DIR, 
@@ -139,7 +140,7 @@ def create_loader(data_source, batch_size, shuffle=False, seed=0):
                  yield np.stack(batch_images), np.array(batch_labels)
     return BatchIterator(dataloader, batch_size, len(data_source))
 
-train_loader = create_loader(CIFARSource(X_train_all[:10000], y_train_all[:10000]), BATCH_SIZE, shuffle=True, seed=42)
+train_loader = create_loader(CIFARSource(X_train_all, y_train_all), BATCH_SIZE, shuffle=True, seed=42)
 
 # Models
 class Generator(nnx.Module):
@@ -160,9 +161,14 @@ class Generator(nnx.Module):
         self.convt3 = nnx.ConvTranspose(ngf * 4, ngf * 2, kernel_size=(4, 4), strides=(2, 2), padding='SAME', 
                                         use_bias=False, rngs=rngs, kernel_init=normal_init)
         self.bn3 = nnx.BatchNorm(ngf * 2, rngs=rngs)
+
+        # Output: (N, 32, 32, ngf)
+        self.convt4 = nnx.ConvTranspose(ngf * 2, ngf, kernel_size=(4, 4), strides=(2, 2), padding='SAME', 
+                                        use_bias=False, rngs=rngs, kernel_init=normal_init)
+        self.bn4 = nnx.BatchNorm(ngf, rngs=rngs)
         
-        # Output: (N, 32, 32, nc)
-        self.convt4 = nnx.ConvTranspose(ngf * 2, nc, kernel_size=(4, 4), strides=(2, 2), padding='SAME', 
+        # Output: (N, 64, 64, nc)
+        self.convt5 = nnx.ConvTranspose(ngf, nc, kernel_size=(4, 4), strides=(2, 2), padding='SAME', 
                                         use_bias=False, rngs=rngs, kernel_init=normal_init)
 
     def __call__(self, z, train: bool = True, use_running_average: bool = None):
@@ -173,7 +179,8 @@ class Generator(nnx.Module):
         h = nnx.relu(self.bn1(self.convt1(h), use_running_average=use_running_average))
         h = nnx.relu(self.bn2(self.convt2(h), use_running_average=use_running_average))
         h = nnx.relu(self.bn3(self.convt3(h), use_running_average=use_running_average))
-        return nnx.tanh(self.convt4(h))
+        h = nnx.relu(self.bn4(self.convt4(h), use_running_average=use_running_average))
+        return nnx.tanh(self.convt5(h))
 
 class Discriminator(nnx.Module):
     def __init__(self, nc, ndf, rngs: nnx.Rngs):
@@ -187,7 +194,10 @@ class Discriminator(nnx.Module):
         self.conv3 = nnx.Conv(ndf * 2, ndf * 4, kernel_size=(4, 4), strides=(2, 2), padding='SAME', 
                               use_bias=False, rngs=rngs, kernel_init=normal_init)
         self.bn3 = nnx.BatchNorm(ndf * 4, rngs=rngs)
-        self.conv5 = nnx.Conv(ndf * 4, 1, kernel_size=(4, 4), strides=(1, 1), padding='VALID', 
+        self.conv4 = nnx.Conv(ndf * 4, ndf * 8, kernel_size=(4, 4), strides=(2, 2), padding='SAME', 
+                              use_bias=False, rngs=rngs, kernel_init=normal_init)
+        self.bn4 = nnx.BatchNorm(ndf * 8, rngs=rngs)
+        self.conv5 = nnx.Conv(ndf * 8, 1, kernel_size=(4, 4), strides=(1, 1), padding='VALID', 
                               use_bias=False, rngs=rngs, kernel_init=normal_init)
 
     def __call__(self, x, train: bool = True, use_running_average: bool = None):
@@ -196,6 +206,7 @@ class Discriminator(nnx.Module):
         h = nnx.leaky_relu(self.conv1(x), negative_slope=0.2)
         h = nnx.leaky_relu(self.bn2(self.conv2(h), use_running_average=use_running_average), negative_slope=0.2)
         h = nnx.leaky_relu(self.bn3(self.conv3(h), use_running_average=use_running_average), negative_slope=0.2)
+        h = nnx.leaky_relu(self.bn4(self.conv4(h), use_running_average=use_running_average), negative_slope=0.2)
         return self.conv5(h).flatten()
 
 class DCGAN(nnx.Module):
@@ -221,7 +232,7 @@ def train_step_D(model, optimizerD, real_x, noise):
         errD = loss_bce(real_pred, jnp.ones_like(real_pred)) + loss_bce(fake_pred, jnp.zeros_like(fake_pred))
         return errD, (nnx.sigmoid(real_pred), nnx.sigmoid(fake_pred))
     (loss, (real_p, fake_p)), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
-    optimizerD.update(model.netD, grads.netD)
+    optimizerD.update(grads.netD)
     return loss, jnp.mean(real_p), jnp.mean(fake_p)
 
 @nnx.jit
@@ -232,7 +243,7 @@ def train_step_G(model, optimizerG, noise):
         errG = loss_bce(fake_logits, jnp.ones_like(fake_logits))
         return errG, nnx.sigmoid(fake_logits)
     (loss, outD), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
-    optimizerG.update(model.netG, grads.netG)
+    optimizerG.update(grads.netG)
     return loss, jnp.mean(outD)
 
 print("Starting Training Loop...")
