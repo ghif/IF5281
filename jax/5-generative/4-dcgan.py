@@ -232,18 +232,25 @@ def update_optimizer(optimizer, module, grads):
 
 @nnx.jit
 def train_step_D(model, optimizerD, real_x, noise):
-    fake_x = model.netG(noise, train=False)
+    # G should be in train mode to update its own stats (though we discard gradients here)
+    fake_x = model.netG(noise, train=True) 
+    
+    # Detach fake_x to treat it as constant for D
+    fake_x = jax.lax.stop_gradient(fake_x)
+
     def loss_fn(model):
-        # Mixed batch for D stability (standard DCGAN best practice)
-        x = jnp.concatenate([real_x, fake_x], axis=0)
-        labels = jnp.concatenate([jnp.ones(real_x.shape[0]), jnp.zeros(fake_x.shape[0])], axis=0)
-        logits = model.netD(x, train=True)
-        errD = loss_bce(logits, labels)
+        # Separate passes for correct Batch Norm statistics (Real vs Fake distributions)
+        real_logits = model.netD(real_x, train=True)
+        fake_logits = model.netD(fake_x, train=True)
         
-        pred = nnx.sigmoid(logits)
-        real_p = pred[:real_x.shape[0]]
-        fake_p = pred[real_x.shape[0]:]
+        errD_real = loss_bce(real_logits, jnp.ones_like(real_logits))
+        errD_fake = loss_bce(fake_logits, jnp.zeros_like(fake_logits))
+        errD = errD_real + errD_fake
+        
+        real_p = nnx.sigmoid(real_logits)
+        fake_p = nnx.sigmoid(fake_logits)
         return errD, (real_p, fake_p)
+        
     (loss, (real_p, fake_p)), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
     update_optimizer(optimizerD, model.netD, grads.netD)
     return loss, jnp.mean(real_p), jnp.mean(fake_p)
@@ -252,9 +259,9 @@ def train_step_D(model, optimizerD, real_x, noise):
 def train_step_G(model, optimizerG, noise):
     def loss_fn(model):
         fake_x = model.netG(noise, train=True)
-        # Use eval mode for D during G-update to provide stable gradients
-        # via the moving averages learned in the D-step.
-        fake_logits = model.netD(fake_x, train=False)
+        # Use train=True for D during G-update to ensure non-vanishing gradients.
+        # D evaluates fakes using their own batch statistics, preventing mode mismatch.
+        fake_logits = model.netD(fake_x, train=True)
         errG = loss_bce(fake_logits, jnp.ones_like(fake_logits))
         return errG, nnx.sigmoid(fake_logits)
     (loss, outD), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
